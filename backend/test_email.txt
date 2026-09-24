@@ -1,0 +1,10 @@
+﻿URGENT: Your bank account requires immediate verification.
+
+Your account will be suspended within 24 hours if you do not verify it.
+
+Click the link below and enter your password and OTP:
+https://example.com/verify
+
+A processing fee of Rs. 499 is required to restore access.
+
+Contact technical support immediately if you need assistance.

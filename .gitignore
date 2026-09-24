@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.class
+
+# Virtual environment
+venv/
+.venv/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Local AI models and caches
+models/
+hf_cache/
+huggingface/
+.cache/
+
+# Audio recordings and generated audio
+audio/*.wav
+backend/*.wav
+
+# Generated screenshots
+screenshots/*.png
+screenshots/*.jpg
+screenshots/*.jpeg
+
+# Generated test media
+backend/scanned_test.pdf
+backend/scanned_test.png
+backend/test_document.pdf
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
