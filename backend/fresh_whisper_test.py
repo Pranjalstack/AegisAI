@@ -13,7 +13,7 @@ MODEL_NAME = "openai/whisper-base"
 def latest_raw_recording():
     files = sorted(AUDIO_DIR.glob("live_chunk_*.wav"))
 
-    # Safety: never use enhanced/processed recordings.
+    # Safety:
     files = [
         file for file in files
         if "_enhanced" not in file.stem
