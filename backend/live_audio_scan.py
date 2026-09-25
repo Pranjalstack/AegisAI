@@ -1,204 +1,143 @@
 # backend/live_audio_scan.py
 
 from pathlib import Path
-import subprocess
 
-from backend.audio_analyzer import analyze_audio_with_ai
+from backend.audio_analyzer import (
+    analyze_audio_with_ai,
+)
 
 
-def enhance_audio(
-    input_path,
-    output_path,
-):
-    """
-    Prepare quiet microphone audio for Whisper.
+AUDIO_DIR = Path("audio")
 
-    The microphone diagnostic showed a low average level,
-    so we apply moderate gain and basic speech-frequency
-    filtering before transcription.
-    """
 
-    input_path = Path(
-        input_path
+def find_latest_raw_chunk():
+    chunks = sorted(
+        AUDIO_DIR.glob("live_chunk_*.wav")
     )
 
-    output_path = Path(
-        output_path
-    )
-
-    output_path.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    command = [
-        "ffmpeg",
-        "-y",
-        "-i",
-        str(input_path),
-
-        "-af",
-        (
-            "highpass=f=80,"
-            "lowpass=f=8000,"
-            "volume=12dB"
-        ),
-
-        "-ar",
-        "16000",
-
-        "-ac",
-        "1",
-
-        "-c:a",
-        "pcm_s16le",
-
-        str(output_path),
+    raw_chunks = [
+        path
+        for path in chunks
+        if "_clean" not in path.stem
+        and "_enhanced" not in path.stem
+        and "_trimmed" not in path.stem
     ]
 
-    subprocess.run(
-        command,
-        check=True,
-    )
-
-    return str(
-        output_path
-    )
-
-
-def find_latest_chunk():
-    """
-    Find the newest live microphone chunk.
-    """
-
-    audio_dir = Path(
-        "audio"
-    )
-
-    chunks = list(
-        audio_dir.glob(
-            "live_chunk_*.wav"
-        )
-    )
-
-    if not chunks:
+    if not raw_chunks:
         raise FileNotFoundError(
-            "No live microphone chunks were found."
+            "No raw live microphone chunks found."
         )
 
-    return max(
-        chunks,
-        key=lambda path: path.stat().st_mtime,
+    return raw_chunks[-1]
+
+
+def main():
+    print(
+        "===== AEGIS LIVE AUDIO ANALYSIS ====="
     )
 
+    audio_path = find_latest_raw_chunk()
 
-def analyze_live_chunk(
-    audio_path,
-):
-    """
-    Enhance the live microphone chunk and run
-    Whisper + threat detection + Qwen.
-    """
-
-    input_path = Path(
-        audio_path
-    )
-
-    if not input_path.is_file():
-        raise FileNotFoundError(
-            f"Audio chunk not found: {audio_path}"
-        )
-
-    enhanced_path = (
-        Path("audio")
-        / "live_enhanced.wav"
+    print(
+        f"\nUsing raw recording:"
+        f"\n{audio_path}"
     )
 
     print(
-        "\n===== AEGIS LIVE AUDIO ANALYSIS =====",
-        flush=True,
-    )
-
-    print(
-        f"Input: {input_path}",
-        flush=True,
-    )
-
-    print(
-        "[1/2] Enhancing microphone audio...",
-        flush=True,
-    )
-
-    enhance_audio(
-        input_path,
-        enhanced_path,
-    )
-
-    print(
-        "[1/2] Audio enhancement complete.",
-        flush=True,
-    )
-
-    print(
-        "[2/2] Running local Whisper + threat analysis + AI...",
-        flush=True,
+        "\nRunning local Faster-Whisper "
+        "small.en..."
     )
 
     result = analyze_audio_with_ai(
-        str(enhanced_path)
+        str(audio_path)
     )
 
-    scan = result["scan"]
+    scan = result.get(
+        "scan",
+        {},
+    )
+
+    metadata = scan.get(
+        "metadata",
+        {},
+    )
 
     print(
         "\n===== LIVE AUDIO RESULT ====="
     )
 
     print(
-        f"Risk Level: {scan['risk']}"
+        f"Risk Level: "
+        f"{scan.get('risk', 'LOW')}"
     )
 
     print(
-        f"Risk Score: {scan['score']}"
+        f"Risk Score: "
+        f"{scan.get('score', 0)}"
     )
 
     print(
         "\nTranscript:"
     )
 
-    if scan["text"]:
-        print(
-            scan["text"]
+    text = scan.get(
+        "text",
+        "",
+    )
+
+    print(
+        text
+        if text
+        else "[No reliable transcription]"
+    )
+
+    print(
+        "\nTranscription status:"
+    )
+
+    print(
+        metadata.get(
+            "analysis_status",
+            "UNKNOWN",
         )
-    else:
+    )
+
+    if "confidence_percent" in metadata:
         print(
-            "[No speech detected]"
+            "Confidence: "
+            f"{metadata['confidence_percent']:.0f}%"
         )
 
     print(
         "\nDetected indicators:"
     )
 
-    if scan["reasons"]:
+    reasons = scan.get(
+        "reasons",
+        [],
+    )
 
-        for reason in scan["reasons"]:
+    if reasons:
+        for reason in reasons:
             print(
                 f"• {reason}"
             )
-
     else:
-
         print(
             "• None"
         )
 
-    if scan["urls"]:
+    urls = scan.get(
+        "urls",
+        [],
+    )
 
+    if urls:
         print(
             "\nLinks detected:"
         )
 
-        for url in scan["urls"]:
+        for url in urls:
             print(
                 f"• {url}"
             )
@@ -208,14 +147,12 @@ def analyze_live_chunk(
     )
 
     print(
-        result["explanation"]
+        result.get(
+            "explanation",
+            "",
+        )
     )
 
 
 if __name__ == "__main__":
-
-    latest_chunk = find_latest_chunk()
-
-    analyze_live_chunk(
-        latest_chunk
-    )
+    main()
