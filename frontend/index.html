@@ -1160,6 +1160,7 @@
 
         statusValue.textContent =
             data.transcription_status
+            || data.metadata?.transcription_status
             || "N/A";
 
 
@@ -1181,9 +1182,14 @@
         );
 
 
-        if (
+        const transcriptionConfidence =
             data.transcription_confidence
+            ?? data.metadata?.transcription_confidence;
+
+        if (
+            transcriptionConfidence
             !== undefined
+            && transcriptionConfidence !== null
         ) {
 
             const confidenceInfo =
@@ -1216,7 +1222,7 @@
                 "info-value";
 
             confidenceValue.textContent =
-                `${data.transcription_confidence}%`;
+                `${transcriptionConfidence}%`;
 
 
             confidenceInfo.appendChild(

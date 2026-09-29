@@ -415,75 +415,34 @@ def analyze_audio(
         analyze_audio_with_ai
     )
 
-    scan, explanation = analyze_audio_with_ai(
+    result = analyze_audio_with_ai(
         audio_path
     )
 
-    if not isinstance(scan, dict):
-        raise TypeError(
-            "Audio analyzer returned an invalid scan result."
-        )
+    scan = result.get(
+        "scan",
+        {}
+    )
 
     unified = result_from_detector(
         scan_type="audio",
-        detector_result={
-            "risk": scan.get(
-                "risk",
-                scan.get(
-                    "risk_level",
-                    "LOW"
-                )
-            ),
-            "score": scan.get(
-                "score",
-                scan.get(
-                    "risk_score",
-                    0
-                )
-            ),
-            "reasons": scan.get(
-                "reasons",
-                []
-            ),
-            "categories": scan.get(
-                "categories",
-                scan.get(
-                    "security_categories",
-                    []
-                )
-            ),
-            "urls": scan.get(
-                "urls",
-                []
-            )
-        },
-        explanation=explanation,
+        detector_result=scan,
+        explanation=result.get(
+            "explanation",
+            ""
+        ),
         transcript=scan.get(
             "text",
-            scan.get(
-                "transcript",
-                ""
-            )
+            ""
         ),
         filename=filename,
-        metadata={
-            "transcription_status": scan.get(
-                "transcription_status",
-                ""
-            ),
-            "transcription_confidence": scan.get(
-                "transcription_confidence",
-                scan.get(
-                    "confidence",
-                    None
-                )
-            )
-        }
     )
 
     return clean_result(
         unified
     )
+
+
 def analyze_screen(
     image_path: str
 ):
