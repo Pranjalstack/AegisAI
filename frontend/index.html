@@ -2,7 +2,9 @@
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
 
     <meta
@@ -13,6 +15,7 @@
     <title>Aegis AI</title>
 
     <style>
+
         * {
             box-sizing: border-box;
         }
@@ -36,6 +39,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 20px;
         }
 
         .brand {
@@ -69,6 +73,11 @@
         .status {
             color: #69d391;
             font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .status.live {
+            color: #ff7b91;
         }
 
         main {
@@ -99,7 +108,7 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 18px;
-            margin-bottom: 35px;
+            margin-bottom: 22px;
         }
 
         .action-card {
@@ -141,6 +150,137 @@
             color: #8992a5;
             font-size: 13px;
             line-height: 1.5;
+        }
+
+        .live-panel {
+            background: #111827;
+            border: 1px solid #252d40;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 35px;
+        }
+
+        .live-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .live-panel-header h3 {
+            margin: 0;
+            font-size: 19px;
+        }
+
+        .live-panel-header p {
+            margin: 5px 0 0;
+            color: #8992a5;
+            font-size: 13px;
+        }
+
+        .live-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .live-button {
+            min-height: 44px;
+            padding: 10px 18px;
+            border-radius: 10px;
+            border: 1px solid #30394e;
+            background: #172033;
+            color: #f5f7fb;
+            cursor: pointer;
+        }
+
+        .live-button:hover {
+            border-color: #596985;
+        }
+
+        .live-button.primary {
+            background: #27344d;
+        }
+
+        .live-button.stop {
+            background: #381b24;
+            border-color: #5c2b38;
+            color: #ff9aac;
+        }
+
+        .live-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .live-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .live-stat {
+            border: 1px solid #252d40;
+            background: #0d1320;
+            border-radius: 12px;
+            padding: 14px;
+        }
+
+        .live-stat-label {
+            color: #7f899d;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+
+        .live-stat-value {
+            color: #f5f7fb;
+            font-size: 15px;
+            font-weight: bold;
+            overflow-wrap: anywhere;
+        }
+
+        .live-transcript {
+            border: 1px solid #252d40;
+            background: #0d1320;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .live-transcript h4 {
+            margin: 0 0 9px;
+            font-size: 14px;
+        }
+
+        .live-transcript-content {
+            color: #a6afc0;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            min-height: 24px;
+        }
+
+        .live-alert {
+            margin-top: 14px;
+            border-radius: 12px;
+            padding: 14px 16px;
+            border: 1px solid #252d40;
+            background: #0d1320;
+            color: #9ba4b7;
+            line-height: 1.5;
+        }
+
+        .live-alert.alert {
+            background: #381b24;
+            border-color: #673341;
+            color: #ff91a2;
+        }
+
+        .live-alert.review {
+            background: #382f18;
+            border-color: #605126;
+            color: #e8c86a;
         }
 
         .result {
@@ -224,6 +364,30 @@
             overflow-wrap: anywhere;
         }
 
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .info-item {
+            background: #0d1320;
+            border: 1px solid #252d40;
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .info-label {
+            color: #7f899d;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            color: #f5f7fb;
+            overflow-wrap: anywhere;
+        }
+
         input[type="file"] {
             display: none;
         }
@@ -282,13 +446,28 @@
         }
 
         @media (max-width: 850px) {
+
             .actions {
                 grid-template-columns: repeat(2, 1fr);
+            }
+
+            .live-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .live-panel-header {
+                align-items: flex-start;
+                flex-direction: column;
             }
         }
 
         @media (max-width: 520px) {
+
             .actions {
+                grid-template-columns: 1fr;
+            }
+
+            .live-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -298,10 +477,24 @@
 
             header {
                 padding: 18px;
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .result-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
             }
         }
+
     </style>
+
 </head>
+
 
 <body>
 
@@ -329,7 +522,10 @@
 
         </div>
 
-        <div class="status">
+        <div
+            class="status"
+            id="systemStatus"
+        >
             ● Local AI Ready
         </div>
 
@@ -459,6 +655,142 @@
         >
 
 
+        <section class="live-panel">
+
+            <div class="live-panel-header">
+
+                <div>
+
+                    <h3>
+                        🎙️ Live Audio Guard
+                    </h3>
+
+                    <p>
+                        Continuous local microphone monitoring with
+                        speech confidence gating and cumulative
+                        security detection.
+                    </p>
+
+                </div>
+
+                <div class="live-controls">
+
+                    <button
+                        type="button"
+                        class="live-button primary"
+                        id="startLiveButton"
+                    >
+                        Start Live Guard
+                    </button>
+
+                    <button
+                        type="button"
+                        class="live-button stop"
+                        id="stopLiveButton"
+                        disabled
+                    >
+                        Stop Live Guard
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="live-grid">
+
+                <div class="live-stat">
+
+                    <div class="live-stat-label">
+                        Guard Status
+                    </div>
+
+                    <div
+                        class="live-stat-value"
+                        id="liveStatusValue"
+                    >
+                        STOPPED
+                    </div>
+
+                </div>
+
+
+                <div class="live-stat">
+
+                    <div class="live-stat-label">
+                        Pipeline Phase
+                    </div>
+
+                    <div
+                        class="live-stat-value"
+                        id="livePhaseValue"
+                    >
+                        STOPPED
+                    </div>
+
+                </div>
+
+
+                <div class="live-stat">
+
+                    <div class="live-stat-label">
+                        Completed Chunks
+                    </div>
+
+                    <div
+                        class="live-stat-value"
+                        id="liveChunksValue"
+                    >
+                        0
+                    </div>
+
+                </div>
+
+
+                <div class="live-stat">
+
+                    <div class="live-stat-label">
+                        Latest Decision
+                    </div>
+
+                    <div
+                        class="live-stat-value"
+                        id="liveDecisionValue"
+                    >
+                        NO ALERT
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="live-transcript">
+
+                <h4>
+                    Latest Trusted Transcription
+                </h4>
+
+                <div
+                    class="live-transcript-content"
+                    id="liveTranscriptValue"
+                >
+                    Live Audio Guard is stopped.
+                </div>
+
+            </div>
+
+
+            <div
+                class="live-alert"
+                id="liveAlertBox"
+            >
+                Aegis is ready for live microphone monitoring.
+            </div>
+
+        </section>
+
+
         <section class="result">
 
             <div class="result-header">
@@ -491,6 +823,10 @@
 
 
 <script>
+
+    const API_BASE =
+        "http://127.0.0.1:8000";
+
 
     const scanScreenButton =
         document.getElementById(
@@ -532,8 +868,62 @@
             "resultBody"
         );
 
+    const systemStatus =
+        document.getElementById(
+            "systemStatus"
+        );
 
-    function setScanning(message) {
+    const startLiveButton =
+        document.getElementById(
+            "startLiveButton"
+        );
+
+    const stopLiveButton =
+        document.getElementById(
+            "stopLiveButton"
+        );
+
+    const liveStatusValue =
+        document.getElementById(
+            "liveStatusValue"
+        );
+
+    const livePhaseValue =
+        document.getElementById(
+            "livePhaseValue"
+        );
+
+    const liveChunksValue =
+        document.getElementById(
+            "liveChunksValue"
+        );
+
+    const liveDecisionValue =
+        document.getElementById(
+            "liveDecisionValue"
+        );
+
+    const liveTranscriptValue =
+        document.getElementById(
+            "liveTranscriptValue"
+        );
+
+    const liveAlertBox =
+        document.getElementById(
+            "liveAlertBox"
+        );
+
+
+    let livePollTimer =
+        null;
+
+    let manualScanBusy =
+        false;
+
+
+    function setScanning(
+        message
+    ) {
 
         riskBadge.className =
             "risk";
@@ -576,7 +966,9 @@
     }
 
 
-    function showError(message) {
+    function showError(
+        message
+    ) {
 
         riskBadge.className =
             "risk error";
@@ -609,7 +1001,9 @@
         );
 
         resultBody.appendChild(
-            document.createTextNode("\n")
+            document.createTextNode(
+                "\n"
+            )
         );
 
         resultBody.appendChild(
@@ -625,27 +1019,41 @@
         typeLabel
     ) {
 
-        if (data.error) {
+        if (
+            !data
+            || data.error
+        ) {
 
             showError(
-                data.message ||
-                "The backend returned an error."
+                data?.message
+                || "The backend returned an error."
             );
 
             return;
         }
 
+
         const risk =
             String(
-                data.risk || "LOW"
+                data.risk
+                || data.risk_level
+                || "LOW"
             ).toLowerCase();
+
+        const score =
+            data.score
+            ?? data.risk_score
+            ?? 0;
+
 
         riskBadge.className =
             `risk ${risk}`;
 
         riskBadge.textContent =
             `${String(
-                data.risk || "UNKNOWN"
+                data.risk
+                || data.risk_level
+                || "UNKNOWN"
             ).toUpperCase()} RISK`;
 
         resultBody.innerHTML =
@@ -660,6 +1068,7 @@
         scoreSection.className =
             "result-section";
 
+
         const scoreHeading =
             document.createElement(
                 "h4"
@@ -668,20 +1077,224 @@
         scoreHeading.textContent =
             `${typeLabel} Result`;
 
-        const scoreText =
+
+        const infoGrid =
             document.createElement(
                 "div"
             );
 
-        scoreText.textContent =
-            `Risk Score: ${data.score}`;
+        infoGrid.className =
+            "info-grid";
+
+
+        const scoreInfo =
+            document.createElement(
+                "div"
+            );
+
+        scoreInfo.className =
+            "info-item";
+
+
+        const scoreLabel =
+            document.createElement(
+                "div"
+            );
+
+        scoreLabel.className =
+            "info-label";
+
+        scoreLabel.textContent =
+            "Risk Score";
+
+
+        const scoreValue =
+            document.createElement(
+                "div"
+            );
+
+        scoreValue.className =
+            "info-value";
+
+        scoreValue.textContent =
+            String(score);
+
+
+        scoreInfo.appendChild(
+            scoreLabel
+        );
+
+        scoreInfo.appendChild(
+            scoreValue
+        );
+
+
+        const statusInfo =
+            document.createElement(
+                "div"
+            );
+
+        statusInfo.className =
+            "info-item";
+
+
+        const statusLabel =
+            document.createElement(
+                "div"
+            );
+
+        statusLabel.className =
+            "info-label";
+
+        statusLabel.textContent =
+            "Transcription Status";
+
+
+        const statusValue =
+            document.createElement(
+                "div"
+            );
+
+        statusValue.className =
+            "info-value";
+
+        statusValue.textContent =
+            data.transcription_status
+            || "N/A";
+
+
+        statusInfo.appendChild(
+            statusLabel
+        );
+
+        statusInfo.appendChild(
+            statusValue
+        );
+
+
+        infoGrid.appendChild(
+            scoreInfo
+        );
+
+        infoGrid.appendChild(
+            statusInfo
+        );
+
+
+        if (
+            data.transcription_confidence
+            !== undefined
+        ) {
+
+            const confidenceInfo =
+                document.createElement(
+                    "div"
+                );
+
+            confidenceInfo.className =
+                "info-item";
+
+
+            const confidenceLabel =
+                document.createElement(
+                    "div"
+                );
+
+            confidenceLabel.className =
+                "info-label";
+
+            confidenceLabel.textContent =
+                "Transcription Confidence";
+
+
+            const confidenceValue =
+                document.createElement(
+                    "div"
+                );
+
+            confidenceValue.className =
+                "info-value";
+
+            confidenceValue.textContent =
+                `${data.transcription_confidence}%`;
+
+
+            confidenceInfo.appendChild(
+                confidenceLabel
+            );
+
+            confidenceInfo.appendChild(
+                confidenceValue
+            );
+
+            infoGrid.appendChild(
+                confidenceInfo
+            );
+        }
+
+
+        const categories =
+            data.security_categories
+            || data.categories
+            || [];
+
+
+        const categoryInfo =
+            document.createElement(
+                "div"
+            );
+
+        categoryInfo.className =
+            "info-item";
+
+
+        const categoryLabel =
+            document.createElement(
+                "div"
+            );
+
+        categoryLabel.className =
+            "info-label";
+
+        categoryLabel.textContent =
+            "Security Categories";
+
+
+        const categoryValue =
+            document.createElement(
+                "div"
+            );
+
+        categoryValue.className =
+            "info-value";
+
+        categoryValue.textContent =
+            categories.length
+                ? categories.join(
+                    ", "
+                )
+                : "None";
+
+
+        categoryInfo.appendChild(
+            categoryLabel
+        );
+
+        categoryInfo.appendChild(
+            categoryValue
+        );
+
+        infoGrid.appendChild(
+            categoryInfo
+        );
+
 
         scoreSection.appendChild(
             scoreHeading
         );
 
         scoreSection.appendChild(
-            scoreText
+            infoGrid
         );
 
         resultBody.appendChild(
@@ -689,7 +1302,9 @@
         );
 
 
-        if (data.filename) {
+        if (
+            data.filename
+        ) {
 
             const fileSection =
                 document.createElement(
@@ -699,6 +1314,7 @@
             fileSection.className =
                 "result-section";
 
+
             const fileHeading =
                 document.createElement(
                     "h4"
@@ -707,6 +1323,7 @@
             fileHeading.textContent =
                 "File";
 
+
             const fileText =
                 document.createElement(
                     "div"
@@ -714,6 +1331,7 @@
 
             fileText.textContent =
                 data.filename;
+
 
             fileSection.appendChild(
                 fileHeading
@@ -729,7 +1347,9 @@
         }
 
 
-        if (data.transcript) {
+        if (
+            data.transcript
+        ) {
 
             const section =
                 document.createElement(
@@ -739,6 +1359,7 @@
             section.className =
                 "result-section";
 
+
             const heading =
                 document.createElement(
                     "h4"
@@ -746,6 +1367,7 @@
 
             heading.textContent =
                 "Transcript";
+
 
             const transcript =
                 document.createElement(
@@ -757,6 +1379,7 @@
 
             transcript.textContent =
                 data.transcript;
+
 
             section.appendChild(
                 heading
@@ -773,8 +1396,8 @@
 
 
         if (
-            data.reasons &&
-            data.reasons.length > 0
+            data.reasons
+            && data.reasons.length > 0
         ) {
 
             const section =
@@ -785,6 +1408,7 @@
             section.className =
                 "result-section";
 
+
             const heading =
                 document.createElement(
                     "h4"
@@ -793,10 +1417,12 @@
             heading.textContent =
                 "Why it may be risky";
 
+
             const list =
                 document.createElement(
                     "ul"
                 );
+
 
             data.reasons.forEach(
                 reason => {
@@ -815,6 +1441,7 @@
                 }
             );
 
+
             section.appendChild(
                 heading
             );
@@ -830,8 +1457,8 @@
 
 
         if (
-            data.urls &&
-            data.urls.length > 0
+            data.urls
+            && data.urls.length > 0
         ) {
 
             const section =
@@ -842,6 +1469,7 @@
             section.className =
                 "result-section";
 
+
             const heading =
                 document.createElement(
                     "h4"
@@ -850,10 +1478,12 @@
             heading.textContent =
                 "Links detected";
 
+
             const list =
                 document.createElement(
                     "ul"
                 );
+
 
             data.urls.forEach(
                 url => {
@@ -875,6 +1505,7 @@
                 }
             );
 
+
             section.appendChild(
                 heading
             );
@@ -889,7 +1520,9 @@
         }
 
 
-        if (data.explanation) {
+        if (
+            data.explanation
+        ) {
 
             const section =
                 document.createElement(
@@ -899,6 +1532,7 @@
             section.className =
                 "result-section";
 
+
             const heading =
                 document.createElement(
                     "h4"
@@ -906,6 +1540,7 @@
 
             heading.textContent =
                 "AI Explanation";
+
 
             const explanation =
                 document.createElement(
@@ -917,6 +1552,7 @@
 
             explanation.textContent =
                 data.explanation;
+
 
             section.appendChild(
                 heading
@@ -932,7 +1568,9 @@
         }
 
 
-        if (data.vision) {
+        if (
+            data.vision
+        ) {
 
             const section =
                 document.createElement(
@@ -942,6 +1580,7 @@
             section.className =
                 "result-section";
 
+
             const heading =
                 document.createElement(
                     "h4"
@@ -949,6 +1588,7 @@
 
             heading.textContent =
                 "Visual Analysis";
+
 
             const vision =
                 document.createElement(
@@ -960,6 +1600,7 @@
 
             vision.textContent =
                 data.vision;
+
 
             section.appendChild(
                 heading
@@ -976,22 +1617,408 @@
     }
 
 
-    scanScreenButton.addEventListener(
+    async function performManualScan(
+        button,
+        url,
+        options,
+        typeLabel,
+        scanningMessage
+    ) {
+
+        if (
+            manualScanBusy
+        ) {
+            return;
+        }
+
+        manualScanBusy =
+            true;
+
+        disableManualControls(
+            true
+        );
+
+        setScanning(
+            scanningMessage
+        );
+
+        try {
+
+            const response =
+                await fetch(
+                    url,
+                    options
+                );
+
+            const data =
+                await response.json();
+
+            if (
+                !response.ok
+            ) {
+
+                throw new Error(
+                    data.message
+                    || "The scan failed."
+                );
+            }
+
+            renderResult(
+                data,
+                typeLabel
+            );
+
+        } catch (
+            error
+        ) {
+
+            showError(
+                error.message
+            );
+
+        } finally {
+
+            manualScanBusy =
+                false;
+
+            await refreshLiveStatus();
+        }
+    }
+
+
+    function disableManualControls(
+        disabled
+    ) {
+
+        scanScreenButton.disabled =
+            disabled;
+
+        scanFileButton.disabled =
+            disabled;
+
+        scanMessageButton.disabled =
+            disabled;
+
+        scanAudioButton.disabled =
+            disabled;
+    }
+
+
+    function setLiveControls(
+        active
+    ) {
+
+        startLiveButton.disabled =
+            active;
+
+        stopLiveButton.disabled =
+            !active;
+
+
+        if (
+            active
+        ) {
+
+            disableManualControls(
+                true
+            );
+
+        } else if (
+            !manualScanBusy
+        ) {
+
+            disableManualControls(
+                false
+            );
+        }
+    }
+
+
+    function renderLiveStatus(
+        data
+    ) {
+
+        if (
+            !data
+        ) {
+            return;
+        }
+
+
+        const active =
+            Boolean(
+                data.active
+            );
+
+
+        liveStatusValue.textContent =
+            active
+                ? "ACTIVE"
+                : String(
+                    data.phase
+                    || "STOPPED"
+                ).toUpperCase();
+
+
+        livePhaseValue.textContent =
+            String(
+                data.phase
+                || "STOPPED"
+            ).toUpperCase();
+
+
+        liveChunksValue.textContent =
+            String(
+                data.completed_chunks
+                ?? 0
+            );
+
+
+        liveDecisionValue.textContent =
+            String(
+                data.alert_level
+                || "NO ALERT"
+            ).toUpperCase();
+
+
+        const latestResult =
+            data.latest_result;
+
+
+        if (
+            latestResult
+        ) {
+
+            if (
+                latestResult.transcript
+            ) {
+
+                liveTranscriptValue.textContent =
+                    latestResult.transcript;
+
+            } else {
+
+                liveTranscriptValue.textContent =
+                    "[No trusted transcription]";
+            }
+
+
+            const resultForRender = {
+                ...latestResult,
+                explanation:
+                    data.latest_explanation
+                    || ""
+            };
+
+
+            if (
+                data.alert_level
+                === "ALERT"
+            ) {
+
+                liveAlertBox.className =
+                    "live-alert alert";
+
+            } else if (
+                data.alert_level
+                === "REVIEW"
+            ) {
+
+                liveAlertBox.className =
+                    "live-alert review";
+
+            } else {
+
+                liveAlertBox.className =
+                    "live-alert";
+            }
+
+
+            let alertText =
+                data.alert_reason
+                || "No alert triggered.";
+
+
+            if (
+                data.notification_triggered
+            ) {
+
+                alertText +=
+                    " Desktop security notification triggered.";
+            }
+
+
+            liveAlertBox.textContent =
+                alertText;
+
+
+            if (
+                data.completed_chunks > 0
+            ) {
+
+                const latestChunkNumber =
+                    data.chunk_number;
+
+
+                if (
+                    latestChunkNumber
+                    && data.latest_result
+                ) {
+
+                    // Keep the main result synchronized with
+                    // the newest completed live chunk.
+                    if (
+                        data.phase
+                        === "ALERT"
+                    ) {
+
+                        riskBadge.className =
+                            "risk high";
+
+                        riskBadge.textContent =
+                            "LIVE ALERT";
+                    }
+                }
+            }
+
+        } else {
+
+            liveTranscriptValue.textContent =
+                active
+                    ? "Waiting for the first completed audio chunk..."
+                    : "Live Audio Guard is stopped.";
+
+            liveAlertBox.className =
+                "live-alert";
+
+            liveAlertBox.textContent =
+                active
+                    ? "Aegis is monitoring the microphone locally."
+                    : "Aegis is ready for live microphone monitoring.";
+        }
+
+
+        if (
+            active
+        ) {
+
+            systemStatus.textContent =
+                "● Live Audio Guard Active";
+
+            systemStatus.className =
+                "status live";
+
+        } else {
+
+            systemStatus.textContent =
+                "● Local AI Ready";
+
+            systemStatus.className =
+                "status";
+        }
+
+
+        setLiveControls(
+            active
+        );
+    }
+
+
+    async function refreshLiveStatus() {
+
+        try {
+
+            const response =
+                await fetch(
+                    `${API_BASE}/live-audio/status`,
+                    {
+                        method: "GET"
+                    }
+                );
+
+            const data =
+                await response.json();
+
+            if (
+                response.ok
+            ) {
+
+                renderLiveStatus(
+                    data
+                );
+            }
+
+        } catch (
+            error
+        ) {
+
+            liveAlertBox.className =
+                "live-alert review";
+
+            liveAlertBox.textContent =
+                "Unable to reach the local Aegis backend.";
+
+            systemStatus.textContent =
+                "● Backend Offline";
+
+            systemStatus.className =
+                "status live";
+        }
+    }
+
+
+    function startLivePolling() {
+
+        if (
+            livePollTimer
+        ) {
+            clearInterval(
+                livePollTimer
+            );
+        }
+
+        livePollTimer =
+            setInterval(
+                refreshLiveStatus,
+                1000
+            );
+    }
+
+
+    function stopLivePolling() {
+
+        if (
+            livePollTimer
+        ) {
+
+            clearInterval(
+                livePollTimer
+            );
+
+            livePollTimer =
+                null;
+        }
+    }
+
+
+    startLiveButton.addEventListener(
         "click",
         async () => {
 
-            scanScreenButton.disabled =
+            startLiveButton.disabled =
                 true;
 
-            setScanning(
-                "Switch to the screen you want Aegis to inspect during the capture countdown."
-            );
+            liveAlertBox.className =
+                "live-alert";
+
+            liveAlertBox.textContent =
+                "Starting Aegis Live Audio Guard...";
 
             try {
 
                 const response =
                     await fetch(
-                        "http://127.0.0.1:8000/scan-screen",
+                        `${API_BASE}/live-audio/start`,
                         {
                             method: "POST"
                         }
@@ -1000,20 +2027,79 @@
                 const data =
                     await response.json();
 
-                if (!response.ok) {
+                if (
+                    !response.ok
+                ) {
 
                     throw new Error(
-                        data.message ||
-                        "The screen scan failed."
+                        data.message
+                        || "Unable to start Live Audio Guard."
                     );
                 }
 
-                renderResult(
-                    data,
-                    "Screen Scan"
+                renderLiveStatus(
+                    data.status
                 );
 
-            } catch (error) {
+                startLivePolling();
+
+            } catch (
+                error
+            ) {
+
+                showError(
+                    error.message
+                );
+
+                await refreshLiveStatus();
+            }
+        }
+    );
+
+
+    stopLiveButton.addEventListener(
+        "click",
+        async () => {
+
+            stopLiveButton.disabled =
+                true;
+
+            liveAlertBox.className =
+                "live-alert";
+
+            liveAlertBox.textContent =
+                "Stopping Aegis Live Audio Guard...";
+
+            try {
+
+                const response =
+                    await fetch(
+                        `${API_BASE}/live-audio/stop`,
+                        {
+                            method: "POST"
+                        }
+                    );
+
+                const data =
+                    await response.json();
+
+                if (
+                    !response.ok
+                ) {
+
+                    throw new Error(
+                        data.message
+                        || "Unable to stop Live Audio Guard."
+                    );
+                }
+
+                renderLiveStatus(
+                    data.status
+                );
+
+            } catch (
+                error
+            ) {
 
                 showError(
                     error.message
@@ -1021,9 +2107,25 @@
 
             } finally {
 
-                scanScreenButton.disabled =
-                    false;
+                await refreshLiveStatus();
             }
+        }
+    );
+
+
+    scanScreenButton.addEventListener(
+        "click",
+        async () => {
+
+            await performManualScan(
+                scanScreenButton,
+                `${API_BASE}/scan-screen`,
+                {
+                    method: "POST"
+                },
+                "Screen Scan",
+                "Switch to the screen you want Aegis to inspect during the capture countdown."
+            );
         }
     );
 
@@ -1031,6 +2133,12 @@
     scanFileButton.addEventListener(
         "click",
         () => {
+
+            if (
+                manualScanBusy
+            ) {
+                return;
+            }
 
             fileInput.click();
         }
@@ -1044,14 +2152,19 @@
             const file =
                 fileInput.files[0];
 
-            if (!file) {
+            if (
+                !file
+            ) {
                 return;
             }
+
 
             if (
                 !file.name
                     .toLowerCase()
-                    .endsWith(".pdf")
+                    .endsWith(
+                        ".pdf"
+                    )
             ) {
 
                 showError(
@@ -1064,63 +2177,31 @@
                 return;
             }
 
-            scanFileButton.disabled =
-                true;
 
-            setScanning(
+            const encodedName =
+                encodeURIComponent(
+                    file.name
+                );
+
+
+            await performManualScan(
+                scanFileButton,
+                `${API_BASE}/scan-file?filename=${encodedName}`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/pdf"
+                    },
+                    body: file
+                },
+                "File Scan",
                 `Analyzing ${file.name}...`
             );
 
-            try {
 
-                const encodedName =
-                    encodeURIComponent(
-                        file.name
-                    );
-
-                const response =
-                    await fetch(
-                        `http://127.0.0.1:8000/scan-file?filename=${encodedName}`,
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type":
-                                    "application/pdf"
-                            },
-                            body: file
-                        }
-                    );
-
-                const data =
-                    await response.json();
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        data.message ||
-                        "The file scan failed."
-                    );
-                }
-
-                renderResult(
-                    data,
-                    "File Scan"
-                );
-
-            } catch (error) {
-
-                showError(
-                    error.message
-                );
-
-            } finally {
-
-                scanFileButton.disabled =
-                    false;
-
-                fileInput.value =
-                    "";
-            }
+            fileInput.value =
+                "";
         }
     );
 
@@ -1128,6 +2209,13 @@
     scanMessageButton.addEventListener(
         "click",
         () => {
+
+            if (
+                manualScanBusy
+            ) {
+                return;
+            }
+
 
             resultBody.innerHTML = `
                 <div class="message-box">
@@ -1165,6 +2253,7 @@
                 </div>
             `;
 
+
             const analyzeButton =
                 document.getElementById(
                     "analyzeMessageButton"
@@ -1188,7 +2277,10 @@
                     const message =
                         messageInput.value.trim();
 
-                    if (!message) {
+
+                    if (
+                        !message
+                    ) {
 
                         showError(
                             "Please enter a message to analyze."
@@ -1196,6 +2288,7 @@
 
                         return;
                     }
+
 
                     scanMessageButton.disabled =
                         true;
@@ -1206,54 +2299,26 @@
                     cancelButton.disabled =
                         true;
 
-                    setScanning(
+                    await performManualScan(
+                        scanMessageButton,
+                        `${API_BASE}/scan-message`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+                            body: JSON.stringify({
+                                message: message
+                            })
+                        },
+                        "Message Scan",
                         "Analyzing the message for suspicious patterns."
                     );
 
-                    try {
 
-                        const response =
-                            await fetch(
-                                "http://127.0.0.1:8000/scan-message",
-                                {
-                                    method: "POST",
-                                    headers: {
-                                        "Content-Type":
-                                            "application/json"
-                                    },
-                                    body: JSON.stringify({
-                                        message: message
-                                    })
-                                }
-                            );
-
-                        const data =
-                            await response.json();
-
-                        if (!response.ok) {
-
-                            throw new Error(
-                                data.message ||
-                                "The message scan failed."
-                            );
-                        }
-
-                        renderResult(
-                            data,
-                            "Message Scan"
-                        );
-
-                    } catch (error) {
-
-                        showError(
-                            error.message
-                        );
-
-                    } finally {
-
-                        scanMessageButton.disabled =
-                            false;
-                    }
+                    scanMessageButton.disabled =
+                        false;
                 }
             );
 
@@ -1286,6 +2351,12 @@
         "click",
         () => {
 
+            if (
+                manualScanBusy
+            ) {
+                return;
+            }
+
             audioInput.click();
         }
     );
@@ -1298,9 +2369,12 @@
             const file =
                 audioInput.files[0];
 
-            if (!file) {
+            if (
+                !file
+            ) {
                 return;
             }
+
 
             const allowedExtensions = [
                 ".wav",
@@ -1310,8 +2384,10 @@
                 ".webm"
             ];
 
+
             const fileName =
                 file.name.toLowerCase();
+
 
             const isAllowed =
                 allowedExtensions.some(
@@ -1321,7 +2397,10 @@
                         )
                 );
 
-            if (!isAllowed) {
+
+            if (
+                !isAllowed
+            ) {
 
                 showError(
                     "Please select WAV, MP3, M4A, OGG, or WEBM audio."
@@ -1333,63 +2412,45 @@
                 return;
             }
 
-            scanAudioButton.disabled =
-                true;
 
-            setScanning(
+            const encodedName =
+                encodeURIComponent(
+                    file.name
+                );
+
+
+            await performManualScan(
+                scanAudioButton,
+                `${API_BASE}/scan-audio?filename=${encodedName}`,
+                {
+                    method: "POST",
+                    body: file
+                },
+                "Audio Scan",
                 `Analyzing ${file.name} with local speech recognition...`
             );
 
-            try {
 
-                const encodedName =
-                    encodeURIComponent(
-                        file.name
-                    );
-
-                const response =
-                    await fetch(
-                        `http://127.0.0.1:8000/scan-audio?filename=${encodedName}`,
-                        {
-                            method: "POST",
-                            body: file
-                        }
-                    );
-
-                const data =
-                    await response.json();
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        data.message ||
-                        "The audio scan failed."
-                    );
-                }
-
-                renderResult(
-                    data,
-                    "Audio Scan"
-                );
-
-            } catch (error) {
-
-                showError(
-                    error.message
-                );
-
-            } finally {
-
-                scanAudioButton.disabled =
-                    false;
-
-                audioInput.value =
-                    "";
-            }
+            audioInput.value =
+                "";
         }
     );
 
+
+    window.addEventListener(
+        "beforeunload",
+        () => {
+
+            stopLivePolling();
+        }
+    );
+
+
+    refreshLiveStatus();
+
 </script>
 
+
 </body>
+
 </html>

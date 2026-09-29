@@ -1,8 +1,8 @@
 # backend/api.py
 
+import tempfile
 import threading
 import time
-import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
 from backend.screen_capture import capture_screen
+
 from backend.aegis_engine import (
     analyze_screen,
     analyze_file,
@@ -18,8 +19,23 @@ from backend.aegis_engine import (
     analyze_audio,
 )
 
+from backend.live_audio import (
+    start_live_guard,
+    stop_live_guard,
+    get_live_status,
+    try_start_operation,
+    finish_operation,
+)
 
-app = FastAPI(title="Aegis AI")
+
+# ================================================================
+# APP
+# ================================================================
+
+app = FastAPI(
+    title="Aegis AI"
+)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,9 +46,13 @@ app.add_middleware(
 )
 
 
-scan_lock = threading.Lock()
+# ================================================================
+# CONFIGURATION
+# ================================================================
 
-MAX_FILE_SIZE = 15 * 1024 * 1024
+MAX_FILE_SIZE = (
+    15 * 1024 * 1024
+)
 
 ALLOWED_AUDIO_EXTENSIONS = {
     ".wav",
@@ -43,31 +63,164 @@ ALLOWED_AUDIO_EXTENSIONS = {
 }
 
 
+# ================================================================
+# HELPERS
+# ================================================================
+
+def operation_busy_response():
+    status = get_live_status()
+
+    operation = status.get(
+        "operation"
+    )
+
+    if operation:
+        message = (
+            "Aegis is currently busy with "
+            f"{operation}. "
+            "Please wait for the current operation to finish."
+        )
+    else:
+        message = (
+            "Aegis is already analyzing something. "
+            "Please wait for the current scan to finish."
+        )
+
+    return JSONResponse(
+        status_code=429,
+        content={
+            "error": True,
+            "message": message,
+        },
+    )
+
+
+def begin_operation(
+    operation_name
+):
+    acquired, existing = (
+        try_start_operation(
+            operation_name
+        )
+    )
+
+    if not acquired:
+        return False, JSONResponse(
+            status_code=429,
+            content={
+                "error": True,
+                "message": (
+                    "Aegis is currently busy with "
+                    f"{existing}. "
+                    "Please wait for the current operation to finish."
+                ),
+            },
+        )
+
+    return True, None
+
+
+# ================================================================
+# ROOT
+# ================================================================
+
 @app.get("/")
 def root():
     return {
         "name": "Aegis AI",
         "status": "online",
+        "live_audio": get_live_status(),
     }
 
 
-@app.post("/scan-screen")
-def scan_screen():
+# ================================================================
+# LIVE AUDIO STATUS
+# ================================================================
 
-    if not scan_lock.acquire(blocking=False):
+@app.get("/live-audio/status")
+def live_audio_status():
+    return {
+        "error": False,
+        **get_live_status(),
+    }
+
+
+# ================================================================
+# LIVE AUDIO START
+# ================================================================
+
+@app.post("/live-audio/start")
+def live_audio_start():
+    acquired, error_response = (
+        begin_operation(
+            "live-audio"
+        )
+    )
+
+    if not acquired:
+        return error_response
+
+    # Release the temporary reservation. The actual live guard
+    # immediately performs its own operation reservation.
+    finish_operation(
+        "live-audio"
+    )
+
+    result = start_live_guard()
+
+    if not result.get(
+        "started",
+        False,
+    ):
         return JSONResponse(
-            status_code=429,
+            status_code=409,
             content={
                 "error": True,
-                "message": (
-                    "Aegis is already analyzing something. "
-                    "Please wait for the current scan to finish."
+                "message": result.get(
+                    "message",
+                    "Unable to start Live Audio Guard.",
                 ),
             },
         )
 
-    try:
+    return {
+        "error": False,
+        **result,
+        "status": get_live_status(),
+    }
 
+
+# ================================================================
+# LIVE AUDIO STOP
+# ================================================================
+
+@app.post("/live-audio/stop")
+def live_audio_stop():
+    result = stop_live_guard()
+
+    return {
+        "error": False,
+        **result,
+        "status": get_live_status(),
+    }
+
+
+# ================================================================
+# SCREEN SCAN
+# ================================================================
+
+@app.post("/scan-screen")
+def scan_screen():
+    acquired, error_response = (
+        begin_operation(
+            "screen-scan"
+        )
+    )
+
+    if not acquired:
+        return error_response
+
+    try:
         print(
             "\n===== NEW SCREEN SCAN REQUEST =====",
             flush=True,
@@ -79,8 +232,11 @@ def scan_screen():
             flush=True,
         )
 
-        for seconds in range(5, 0, -1):
-
+        for seconds in range(
+            5,
+            0,
+            -1,
+        ):
             print(
                 f"Capturing in {seconds}...",
                 flush=True,
@@ -122,9 +278,8 @@ def scan_screen():
         return result
 
     except Exception as error:
-
         print(
-            f"SCREEN SCAN ERROR: "
+            "SCREEN SCAN ERROR: "
             f"{type(error).__name__}: {error}",
             flush=True,
         )
@@ -138,32 +293,32 @@ def scan_screen():
         )
 
     finally:
+        finish_operation(
+            "screen-scan"
+        )
 
-        scan_lock.release()
 
+# ================================================================
+# FILE SCAN
+# ================================================================
 
 @app.post("/scan-file")
 async def scan_file(
     request: Request,
     filename: str = "document.pdf",
 ):
-
-    if not scan_lock.acquire(blocking=False):
-        return JSONResponse(
-            status_code=429,
-            content={
-                "error": True,
-                "message": (
-                    "Aegis is already analyzing something. "
-                    "Please wait for the current scan to finish."
-                ),
-            },
+    acquired, error_response = (
+        begin_operation(
+            "file-scan"
         )
+    )
+
+    if not acquired:
+        return error_response
 
     temp_path = None
 
     try:
-
         print(
             "\n===== NEW FILE SCAN REQUEST =====",
             flush=True,
@@ -176,7 +331,6 @@ async def scan_file(
         if not safe_name.lower().endswith(
             ".pdf"
         ):
-
             return JSONResponse(
                 status_code=400,
                 content={
@@ -190,7 +344,6 @@ async def scan_file(
         file_data = await request.body()
 
         if not file_data:
-
             return JSONResponse(
                 status_code=400,
                 content={
@@ -202,7 +355,6 @@ async def scan_file(
             )
 
         if len(file_data) > MAX_FILE_SIZE:
-
             return JSONResponse(
                 status_code=413,
                 content={
@@ -223,7 +375,6 @@ async def scan_file(
             suffix=".pdf",
             delete=False,
         ) as temp_file:
-
             temp_file.write(
                 file_data
             )
@@ -249,9 +400,8 @@ async def scan_file(
         return result
 
     except Exception as error:
-
         print(
-            f"FILE SCAN ERROR: "
+            "FILE SCAN ERROR: "
             f"{type(error).__name__}: {error}",
             flush=True,
         )
@@ -265,41 +415,39 @@ async def scan_file(
         )
 
     finally:
-
         if temp_path:
-
             try:
                 Path(
                     temp_path
                 ).unlink(
                     missing_ok=True
                 )
-
             except Exception:
                 pass
 
-        scan_lock.release()
+        finish_operation(
+            "file-scan"
+        )
 
+
+# ================================================================
+# MESSAGE SCAN
+# ================================================================
 
 @app.post("/scan-message")
 async def scan_message(
     request: Request
 ):
-
-    if not scan_lock.acquire(blocking=False):
-        return JSONResponse(
-            status_code=429,
-            content={
-                "error": True,
-                "message": (
-                    "Aegis is already analyzing something. "
-                    "Please wait for the current scan to finish."
-                ),
-            },
+    acquired, error_response = (
+        begin_operation(
+            "message-scan"
         )
+    )
+
+    if not acquired:
+        return error_response
 
     try:
-
         print(
             "\n===== NEW MESSAGE SCAN REQUEST =====",
             flush=True,
@@ -315,7 +463,6 @@ async def scan_message(
         ).strip()
 
         if not message:
-
             return JSONResponse(
                 status_code=400,
                 content={
@@ -327,7 +474,6 @@ async def scan_message(
             )
 
         if len(message) > 12000:
-
             return JSONResponse(
                 status_code=413,
                 content={
@@ -340,7 +486,7 @@ async def scan_message(
             )
 
         print(
-            f"[1/1] Running unified message analysis "
+            "[1/1] Running unified message analysis "
             f"on {len(message)} characters...",
             flush=True,
         )
@@ -358,9 +504,8 @@ async def scan_message(
         return result
 
     except Exception as error:
-
         print(
-            f"MESSAGE SCAN ERROR: "
+            "MESSAGE SCAN ERROR: "
             f"{type(error).__name__}: {error}",
             flush=True,
         )
@@ -374,32 +519,32 @@ async def scan_message(
         )
 
     finally:
+        finish_operation(
+            "message-scan"
+        )
 
-        scan_lock.release()
 
+# ================================================================
+# MANUAL AUDIO SCAN
+# ================================================================
 
 @app.post("/scan-audio")
 async def scan_audio(
     request: Request,
     filename: str = "audio.wav",
 ):
-
-    if not scan_lock.acquire(blocking=False):
-        return JSONResponse(
-            status_code=429,
-            content={
-                "error": True,
-                "message": (
-                    "Aegis is already analyzing something. "
-                    "Please wait for the current scan to finish."
-                ),
-            },
+    acquired, error_response = (
+        begin_operation(
+            "audio-scan"
         )
+    )
+
+    if not acquired:
+        return error_response
 
     temp_path = None
 
     try:
-
         print(
             "\n===== NEW AUDIO SCAN REQUEST =====",
             flush=True,
@@ -413,8 +558,10 @@ async def scan_audio(
             safe_name
         ).suffix.lower()
 
-        if extension not in ALLOWED_AUDIO_EXTENSIONS:
-
+        if (
+            extension
+            not in ALLOWED_AUDIO_EXTENSIONS
+        ):
             return JSONResponse(
                 status_code=400,
                 content={
@@ -429,7 +576,6 @@ async def scan_audio(
         audio_data = await request.body()
 
         if not audio_data:
-
             return JSONResponse(
                 status_code=400,
                 content={
@@ -441,7 +587,6 @@ async def scan_audio(
             )
 
         if len(audio_data) > MAX_FILE_SIZE:
-
             return JSONResponse(
                 status_code=413,
                 content={
@@ -462,7 +607,6 @@ async def scan_audio(
             suffix=extension,
             delete=False,
         ) as temp_file:
-
             temp_file.write(
                 audio_data
             )
@@ -488,9 +632,8 @@ async def scan_audio(
         return result
 
     except Exception as error:
-
         print(
-            f"AUDIO SCAN ERROR: "
+            "AUDIO SCAN ERROR: "
             f"{type(error).__name__}: {error}",
             flush=True,
         )
@@ -504,17 +647,16 @@ async def scan_audio(
         )
 
     finally:
-
         if temp_path:
-
             try:
                 Path(
                     temp_path
                 ).unlink(
                     missing_ok=True
                 )
-
             except Exception:
                 pass
 
-        scan_lock.release()
+        finish_operation(
+            "audio-scan"
+        )

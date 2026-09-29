@@ -20,10 +20,6 @@ class AegisResult:
         default_factory=list
     )
 
-    categories: list[str] = field(
-        default_factory=list
-    )
-
     urls: list[str] = field(
         default_factory=list
     )
@@ -53,7 +49,6 @@ def create_result(
     risk: str = "LOW",
     score: int = 0,
     reasons=None,
-    categories=None,
     urls=None,
     explanation: str = "",
     transcript: str = "",
@@ -74,10 +69,6 @@ def create_result(
 
         reasons=list(
             reasons or []
-        ),
-
-        categories=list(
-            categories or []
         ),
 
         urls=list(
@@ -135,11 +126,6 @@ def result_from_detector(
 
         reasons=detector_result.get(
             "reasons",
-            []
-        ),
-
-        categories=detector_result.get(
-            "categories",
             []
         ),
 
@@ -224,19 +210,6 @@ def clean_result(result):
             str(reasons)
         ]
 
-    categories = result.get(
-        "categories",
-        []
-    )
-
-    if not isinstance(
-        categories,
-        list
-    ):
-        categories = [
-            str(categories)
-        ]
-
     urls = result.get(
         "urls",
         []
@@ -276,11 +249,6 @@ def clean_result(result):
         "reasons": [
             str(reason)
             for reason in reasons
-        ],
-
-        "categories": [
-            str(category)
-            for category in categories
         ],
 
         "urls": [

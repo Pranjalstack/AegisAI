@@ -1,64 +1,249 @@
-# backend/threat_detector.py
-
-import re
-
-from backend.url_analyzer import analyze_url
+﻿import re
+from urllib.parse import urlparse
 
 
 URL_PATTERN = re.compile(
-    r"https?://[^\s<>\]\)\"']+",
+    r"https?://[^\s<>\"]+",
     re.IGNORECASE,
 )
 
 
 def normalize_text(text):
-    text = str(text or "")
+    value = str(text or "")
 
-    return re.sub(
+    value = value.replace("\u2018", "'")
+    value = value.replace("\u2019", "'")
+    value = value.replace("\u201c", '"')
+    value = value.replace("\u201d", '"')
+    value = value.replace("\u2013", "-")
+    value = value.replace("\u2014", "-")
+    value = value.replace("\u00a0", " ")
+
+    value = re.sub(
         r"\s+",
         " ",
-        text,
-    ).strip()
-
-
-def extract_urls(text):
-    urls = URL_PATTERN.findall(
-        str(text or "")
+        value
     )
 
-    cleaned = []
-
-    for url in urls:
-
-        url = url.rstrip(
-            ".,!?;:"
-        )
-
-        if url not in cleaned:
-            cleaned.append(
-                url
-            )
-
-    return cleaned
+    return value.strip()
 
 
 def contains_any(text, patterns):
-    return any(
-        re.search(
-            pattern,
-            text,
-            re.IGNORECASE,
+    value = str(text or "")
+
+    for pattern in patterns:
+        try:
+            if re.search(
+                pattern,
+                value,
+                re.IGNORECASE
+            ):
+                return True
+        except re.error:
+            continue
+
+    return False
+
+
+def extract_urls(text):
+    original_text = str(text or "")
+    urls = []
+
+    for match in URL_PATTERN.findall(original_text):
+        cleaned = match.rstrip(
+            ".,;:!?)]}>\"'"
         )
-        for pattern in patterns
+
+        if cleaned and cleaned not in urls:
+            urls.append(cleaned)
+
+    return urls
+
+
+def analyze_url(url):
+    original_url = str(
+        url or ""
+    ).strip()
+
+    reasons = []
+    score = 0
+
+    if not original_url:
+        return {
+            "risk": "LOW",
+            "score": 0,
+            "reasons": [],
+            "url": "",
+        }
+
+    parsed = urlparse(
+        original_url
     )
+
+    hostname = (
+        parsed.hostname
+        or ""
+    ).lower()
+
+    path = (
+        parsed.path
+        or ""
+    ).lower()
+
+    query = (
+        parsed.query
+        or ""
+    ).lower()
+
+    if not hostname:
+        reasons.append(
+            "URL does not contain a valid hostname"
+        )
+        score += 3
+
+    if re.fullmatch(
+        r"^(?:\d{1,3}\.){3}\d{1,3}$",
+        hostname
+    ):
+        reasons.append(
+            "Uses a raw IP address instead of a normal domain"
+        )
+        score += 3
+
+    if "xn--" in hostname:
+        reasons.append(
+            "Uses punycode that may indicate a lookalike domain"
+        )
+        score += 3
+
+    if parsed.username:
+        reasons.append(
+            "Contains a username before the hostname"
+        )
+        score += 2
+
+    try:
+        port = parsed.port
+    except ValueError:
+        port = None
+        reasons.append(
+            "Contains an invalid URL port"
+        )
+        score += 2
+
+    if port is not None and port not in {
+        80,
+        443,
+    }:
+        reasons.append(
+            "Uses an unusual explicit network port"
+        )
+        score += 2
+
+    hostname_parts = [
+        part
+        for part in hostname.split(".")
+        if part
+    ]
+
+    if len(hostname_parts) >= 5:
+        reasons.append(
+            "Uses an unusually deep subdomain structure"
+        )
+        score += 2
+
+    suspicious_path_patterns = [
+        r"\blogin\b",
+        r"\blog[\s_-]*in\b",
+        r"\bsign[\s_-]*in\b",
+        r"\bverify\b",
+        r"\bverification\b",
+        r"\baccount\b",
+        r"\bsecure\b",
+        r"\bsecurity\b",
+        r"\bpassword\b",
+        r"\botp\b",
+        r"\bupdate\b",
+        r"\bunlock\b",
+        r"\bconfirm\b",
+        r"\breactivate\b",
+    ]
+
+    if contains_any(
+        path,
+        suspicious_path_patterns
+    ):
+        reasons.append(
+            "URL path contains account or security-related keywords"
+        )
+        score += 1
+
+    shortener_domains = {
+        "bit.ly",
+        "tinyurl.com",
+        "t.co",
+        "goo.gl",
+        "is.gd",
+        "ow.ly",
+        "buff.ly",
+        "cutt.ly",
+        "rb.gy",
+        "shorturl.at",
+        "tiny.cc",
+        "rebrand.ly",
+    }
+
+    if hostname in shortener_domains:
+        reasons.append(
+            "Uses a URL-shortening service that hides the final destination"
+        )
+        score += 3
+
+    if len(original_url) >= 180:
+        reasons.append(
+            "URL is unusually long and difficult to inspect"
+        )
+        score += 1
+
+    suspicious_query_patterns = [
+        r"\btoken=",
+        r"\bredirect=",
+        r"\breturn=",
+        r"\bnext=",
+        r"\bcontinue=",
+        r"\bpassword=",
+        r"\botp=",
+        r"\bverify=",
+        r"\blogin=",
+    ]
+
+    if contains_any(
+        query,
+        suspicious_query_patterns
+    ):
+        reasons.append(
+            "URL contains security-sensitive or redirect parameters"
+        )
+        score += 1
+
+    if score >= 5:
+        risk = "HIGH"
+    elif score >= 2:
+        risk = "MEDIUM"
+    else:
+        risk = "LOW"
+
+    return {
+        "risk": risk,
+        "score": score,
+        "reasons": reasons,
+        "url": original_url,
+    }
 
 
 def analyze_text(text):
     """
     Context-aware Aegis threat detector.
-
-    Text signals and URL structural signals are analyzed
-    separately and then combined into one result.
     """
 
     original_text = str(
@@ -74,12 +259,12 @@ def analyze_text(text):
     )
 
     reasons = []
+    categories = []
     score = 0
 
-
-    # ---------------------------------------------------------
-    # 1. Strong urgency / threat
-    # ---------------------------------------------------------
+    # ========================================================
+    # 1. STRONG URGENCY
+    # ========================================================
 
     strong_urgency_patterns = [
         r"\burgent\b",
@@ -98,21 +283,23 @@ def analyze_text(text):
 
     strong_urgency_detected = contains_any(
         lowered,
-        strong_urgency_patterns,
+        strong_urgency_patterns
     )
 
     if strong_urgency_detected:
-
         reasons.append(
             "Uses urgent or threatening language"
         )
 
+        categories.append(
+            "urgency"
+        )
+
         score += 2
 
-
-    # ---------------------------------------------------------
-    # 2. Mild urgency
-    # ---------------------------------------------------------
+    # ========================================================
+    # 2. MILD URGENCY
+    # ========================================================
 
     mild_urgency_patterns = [
         r"\baction\s+required\b",
@@ -123,37 +310,120 @@ def analyze_text(text):
 
     mild_urgency_detected = contains_any(
         lowered,
-        mild_urgency_patterns,
+        mild_urgency_patterns
     )
 
+    # ========================================================
+    # 3. CREDENTIAL HARVESTING
+    # ========================================================
 
-    # ---------------------------------------------------------
-    # 3. Credential harvesting
-    # ---------------------------------------------------------
-
-    credential_patterns = [
-
-        r"\b(?:enter|provide|send|share|submit|give|tell|confirm)\b"
-        r".{0,60}"
-        r"\b(?:password|otp|one[-\s]?time\s+password|pin|cvv|security\s+code|verification\s+code)\b",
-
-        r"\b(?:password|otp|one[-\s]?time\s+password|pin|cvv|security\s+code|verification\s+code)\b"
-        r".{0,60}"
-        r"\b(?:enter|provide|send|share|submit|give|tell|confirm)\b",
-
-        r"\b(?:login|sign[-\s]?in)\b"
-        r".{0,60}"
-        r"\b(?:password|otp|pin|verification\s+code)\b",
-
-        r"\b(?:send|share|give|provide)\b"
-        r".{0,60}"
-        r"\b(?:card\s+number|credit\s+card|debit\s+card|account\s+number|cvv|upi|ifsc)\b",
+    credential_action_patterns = [
+        r"\benter\b",
+        r"\bentering\b",
+        r"\bprovide\b",
+        r"\bproviding\b",
+        r"\bprovided\b",
+        r"\bsend\b",
+        r"\bsending\b",
+        r"\bsent\b",
+        r"\bshare\b",
+        r"\bsharing\b",
+        r"\bshared\b",
+        r"\bsubmit\b",
+        r"\bsubmitting\b",
+        r"\bsubmitted\b",
+        r"\bgive\b",
+        r"\bgiving\b",
+        r"\bgave\b",
+        r"\btell\b",
+        r"\btelling\b",
+        r"\btold\b",
+        r"\bconfirm\b",
+        r"\bconfirming\b",
+        r"\bconfirmed\b",
     ]
 
-    credential_detected = contains_any(
-        lowered,
-        credential_patterns,
+    credential_words_pattern = (
+        r"(?:"
+        r"password"
+        r"|otp"
+        r"|one[-\s]?time\s+password"
+        r"|pin"
+        r"|cvv"
+        r"|security\s+code"
+        r"|verification\s+code"
+        r")"
     )
+
+    financial_information_pattern = (
+        r"(?:"
+        r"card\s+number"
+        r"|credit\s+card"
+        r"|debit\s+card"
+        r"|account\s+number"
+        r"|cvv"
+        r"|upi"
+        r"|ifsc"
+        r")"
+    )
+
+    credential_detected = False
+
+    for action_pattern in credential_action_patterns:
+
+        pattern_one = (
+            action_pattern
+            + r".{0,80}"
+            + r"\b"
+            + credential_words_pattern
+            + r"\b"
+        )
+
+        pattern_two = (
+            r"\b"
+            + credential_words_pattern
+            + r"\b"
+            + r".{0,80}"
+            + action_pattern
+        )
+
+        pattern_three = (
+            action_pattern
+            + r".{0,80}"
+            + r"\b"
+            + financial_information_pattern
+            + r"\b"
+        )
+
+        if contains_any(
+            lowered,
+            [
+                pattern_one,
+                pattern_two,
+                pattern_three,
+            ]
+        ):
+            credential_detected = True
+            break
+
+    if not credential_detected:
+
+        credential_detected = contains_any(
+            lowered,
+            [
+                r"\b(?:your|the)\s+otp\b"
+                r".{0,40}"
+                r"\b(?:and|or)\b"
+                r".{0,40}"
+                r"\b(?:your|the)?\s*password\b",
+
+                r"\b(?:your|the)\s+password\b"
+                r".{0,40}"
+                r"\b(?:and|or)\b"
+                r".{0,40}"
+                r"\b(?:your|the)?\s*otp\b",
+            ]
+        )
 
     if credential_detected:
 
@@ -161,35 +431,33 @@ def analyze_text(text):
             "Requests sensitive credentials or financial information"
         )
 
+        categories.append(
+            "credentials"
+        )
+
         score += 3
 
-
-    # ---------------------------------------------------------
-    # 4. Payment / money request
-    # ---------------------------------------------------------
+    # ========================================================
+    # 4. PAYMENT
+    # ========================================================
 
     payment_patterns = [
-
         r"\bpayment\s+of\s+(?:rs\.?|inr|₹|\$|usd)?\s*\d+",
-
         r"\bpay\s+(?:rs\.?|inr|₹|\$|usd)?\s*\d+",
-
         r"\b(?:processing|verification|activation|service|support)\s+fee\b",
-
         r"\bfee\s+of\s+(?:rs\.?|inr|₹|\$|usd)?\s*\d+",
-
-        r"\b(?:pay|send|transfer)\b"
-        r".{0,60}"
+        r"\b(?:pay|send|sending|transfer|transferring)\b"
+        r".{0,80}"
         r"\b(?:money|fee|payment|amount|rs\.?|inr|₹|\$|usd)\b",
-
         r"\b(?:payment|fee|amount)\b"
-        r".{0,40}"
+        r".{0,50}"
         r"\b(?:required|due|needed|to\s+continue)\b",
+        r"\b(?:make|complete)\s+(?:a\s+)?payment\b",
     ]
 
     payment_detected = contains_any(
         lowered,
-        payment_patterns,
+        payment_patterns
     )
 
     if payment_detected:
@@ -198,56 +466,59 @@ def analyze_text(text):
             "Contains a payment or money-transfer request"
         )
 
+        categories.append(
+            "payment"
+        )
+
         score += 2
 
-
-    # ---------------------------------------------------------
-    # 5. Account security context
-    # ---------------------------------------------------------
+    # ========================================================
+    # 5. ACCOUNT SECURITY CONTEXT
+    # ========================================================
 
     account_security_patterns = [
-
         r"\b(?:bank|banking)\b"
-        r".{0,100}"
-        r"\b(?:verify|verification|suspended|blocked|locked|restore|reactivate)\b",
+        r".{0,120}"
+        r"\b(?:verify|verification|suspended|blocked|locked|"
+        r"restricted|restore|reactivate)\b",
 
         r"\baccount\b"
-        r".{0,80}"
+        r".{0,100}"
         r"\b(?:suspended|blocked|locked|restricted)\b",
 
         r"\baccount\b"
-        r".{0,80}"
+        r".{0,100}"
         r"\b(?:verify|verification)\b",
     ]
 
     account_security_detected = contains_any(
         lowered,
-        account_security_patterns,
+        account_security_patterns
     )
 
-
-    # ---------------------------------------------------------
-    # 6. Technical support scam
-    # ---------------------------------------------------------
+    # ========================================================
+    # 6. TECHNICAL SUPPORT
+    # ========================================================
 
     technical_support_patterns = [
-
         r"\btechnical\s+support\b"
-        r".{0,100}"
-        r"\b(?:remote|install|download|access|control|password|otp|pay|fee)\b",
+        r".{0,120}"
+        r"\b(?:remote|install|download|access|control|"
+        r"password|otp|pay|fee)\b",
 
         r"\b(?:technician|help\s*desk)\b"
-        r".{0,100}"
-        r"\b(?:remote\s+access|remote\s+control|install|download|anydesk|teamviewer|quick\s*assist)\b",
+        r".{0,120}"
+        r"\b(?:remote\s+access|remote\s+control|"
+        r"install|download|anydesk|teamviewer|quick\s*assist)\b",
 
         r"\b(?:support|technician|help\s*desk)\b"
-        r".{0,100}"
+        r".{0,120}"
         r"\b(?:password|otp|pay|fee|remote\s+access)\b",
     ]
 
     technical_support_detected = contains_any(
         lowered,
-        technical_support_patterns,
+        technical_support_patterns
     )
 
     if technical_support_detected:
@@ -256,19 +527,23 @@ def analyze_text(text):
             "Contains potential technical-support scam indicators"
         )
 
+        categories.append(
+            "technical_support"
+        )
+
         score += 3
 
-
-    # ---------------------------------------------------------
-    # 7. Link context
-    # ---------------------------------------------------------
+    # ========================================================
+    # 7. LINK CONTEXT
+    # ========================================================
 
     link_context_patterns = [
         r"\bclick\s+(?:here|this|the\s+link)\b",
         r"\bopen\s+(?:this|the)\s+link\b",
         r"\bvisit\s+(?:this|the)\s+link\b",
         r"\bverify\s+(?:your|the)\s+account\b",
-        r"\benter\b.{0,60}\b(?:password|otp|pin)\b",
+        r"\benter\b.{0,80}"
+        r"\b(?:password|otp|pin|cvv)\b",
     ]
 
     suspicious_link_context = (
@@ -282,7 +557,7 @@ def analyze_text(text):
             or mild_urgency_detected
             or contains_any(
                 lowered,
-                link_context_patterns,
+                link_context_patterns
             )
         )
     )
@@ -293,27 +568,34 @@ def analyze_text(text):
             "Contains a link that should be verified before opening"
         )
 
+        if "link" not in categories:
+            categories.append(
+                "link"
+            )
+
         score += 1
 
-
-    # ---------------------------------------------------------
-    # 8. Impersonation context
-    # ---------------------------------------------------------
+    # ========================================================
+    # 8. IMPERSONATION
+    # ========================================================
 
     impersonation_patterns = [
-
         r"\b(?:your|the)\s+bank\s+account\b"
-        r".{0,100}"
-        r"\b(?:verify|verification|suspended|blocked|locked|restore|reactivate)\b",
+        r".{0,120}"
+        r"\b(?:verify|verification|suspended|blocked|locked|"
+        r"restricted|restore|reactivate)\b",
 
-        r"\b(?:paypal|paytm|phonepe|google\s+pay|amazon|microsoft|apple|google|meta|instagram|facebook|whatsapp|netflix)\b"
-        r".{0,100}"
-        r"\b(?:verify|verification|suspended|blocked|locked|restore|reactivate|payment)\b",
+        r"\b(?:paypal|paytm|phonepe|google\s+pay|amazon|"
+        r"microsoft|apple|google|meta|instagram|facebook|"
+        r"whatsapp|netflix)\b"
+        r".{0,120}"
+        r"\b(?:verify|verification|suspended|blocked|locked|"
+        r"restricted|restore|reactivate|payment)\b",
     ]
 
     impersonation_detected = contains_any(
         lowered,
-        impersonation_patterns,
+        impersonation_patterns
     )
 
     if impersonation_detected:
@@ -322,12 +604,15 @@ def analyze_text(text):
             "References an organization commonly used in impersonation scams"
         )
 
+        categories.append(
+            "impersonation"
+        )
+
         score += 2
 
-
-    # ---------------------------------------------------------
-    # 9. URL structural intelligence
-    # ---------------------------------------------------------
+    # ========================================================
+    # 9. URL STRUCTURAL INTELLIGENCE
+    # ========================================================
 
     url_score = 0
 
@@ -337,37 +622,47 @@ def analyze_text(text):
             url
         )
 
-        url_score += url_result["score"]
+        url_score += url_result[
+            "score"
+        ]
 
-        for reason in url_result["reasons"]:
+        for reason in url_result[
+            "reasons"
+        ]:
 
             if reason not in reasons:
-
                 reasons.append(
                     reason
                 )
 
+        if url_result["score"] >= 2:
 
-    # Prevent URL structure alone from overwhelming the
-    # message context. At most 3 points are contributed
-    # to the overall text risk score.
+            if "link" not in categories:
+                categories.append(
+                    "link"
+                )
+
     score += min(
         url_score,
         3
     )
 
-
-    # ---------------------------------------------------------
-    # 10. Contextual combinations
-    # ---------------------------------------------------------
+    # ========================================================
+    # 10. CONTEXTUAL COMBINATIONS
+    # ========================================================
 
     if mild_urgency_detected and (
         credential_detected
         or payment_detected
-        or urls
+        or bool(urls)
     ):
+
         score += 1
 
+        if "urgency" not in categories:
+            categories.append(
+                "urgency"
+            )
 
     if payment_detected and (
         strong_urgency_detected
@@ -375,218 +670,60 @@ def analyze_text(text):
         or account_security_detected
         or impersonation_detected
     ):
-        score += 1
 
+        score += 1
 
     if credential_detected and (
         strong_urgency_detected
         or account_security_detected
         or impersonation_detected
     ):
+
         score += 1
 
-
-    # ---------------------------------------------------------
-    # Final risk level
-    # ---------------------------------------------------------
+    # ========================================================
+    # 11. FINAL RISK
+    # ========================================================
 
     if score >= 8:
-
         risk = "HIGH"
-
     elif score >= 4:
-
         risk = "MEDIUM"
-
     else:
-
         risk = "LOW"
 
+    # ========================================================
+    # 12. DEDUPLICATE
+    # ========================================================
 
     unique_reasons = []
 
     for reason in reasons:
 
         if reason not in unique_reasons:
-
             unique_reasons.append(
                 reason
             )
 
+    unique_categories = []
+
+    for category in categories:
+
+        if category not in unique_categories:
+            unique_categories.append(
+                category
+            )
 
     return {
         "risk": risk,
         "score": score,
         "reasons": unique_reasons,
+        "categories": unique_categories,
         "urls": urls,
     }
 
 
-if __name__ == "__main__":
-
-    examples = [
-
-        (
-            "SAFE",
-            "Hey, are we still meeting at the gym at 6 PM?"
-        ),
-
-        (
-            "SAFE_WEBSITE",
-            """
-            Your order has been shipped.
-            You can check the delivery status from the
-            shopping website you normally use.
-            """
-        ),
-
-        (
-            "SAFE_ACCOUNT",
-            """
-            You can review your account information from
-            the official mobile app whenever convenient.
-            """
-        ),
-
-        (
-            "LOW_SECURITY_NOTICE",
-            """
-            Your password expires next month.
-            Please update it when you have time.
-            """
-        ),
-
-        (
-            "MEDIUM_URGENCY",
-            """
-            Action required: please verify your account
-            information before the end of the week.
-            """
-        ),
-
-        (
-            "MEDIUM_LINK",
-            """
-            Your account requires verification.
-            Please click here to review your account:
-            https://example.com/account
-            """
-        ),
-
-        (
-            "MEDIUM_CREDENTIAL",
-            """
-            Security verification is required.
-            Please enter your OTP to continue.
-            """
-        ),
-
-        (
-            "MEDIUM_PAYMENT",
-            """
-            Your subscription requires a payment of Rs. 299
-            to continue service.
-            """
-        ),
-
-        (
-            "HIGH_BANK_SCAM",
-            """
-            URGENT: Your bank account will be suspended within
-            24 hours.
-
-            Click the link below and enter your password and OTP:
-            https://example.com/verify
-
-            A processing fee of Rs. 499 is required to restore access.
-            """
-        ),
-
-        (
-            "HIGH_TECH_SUPPORT",
-            """
-            URGENT: Your computer has a serious security problem.
-
-            Call technical support immediately.
-            Install remote access software and provide your password
-            so the technician can fix the issue.
-
-            A support fee of Rs. 999 is required today.
-            """
-        ),
-
-        (
-            "URL_IP",
-            "Please verify your account here: https://192.168.1.20/login"
-        ),
-
-        (
-            "URL_SHORTENER",
-            "Here is the shortened link: https://bit.ly/abc123"
-        ),
-    ]
-
-
-    print(
-        "\n===== AEGIS THREAT DETECTOR ====="
+def detect_threat(text):
+    return analyze_text(
+        text
     )
-
-
-    for name, example in examples:
-
-        result = analyze_text(
-            example
-        )
-
-        print(
-            "\n----------------------------------------"
-        )
-
-        print(
-            f"Test: {name}"
-        )
-
-        print(
-            f"Risk: {result['risk']}"
-        )
-
-        print(
-            f"Score: {result['score']}"
-        )
-
-        print(
-            "Reasons:"
-        )
-
-        if result["reasons"]:
-
-            for reason in result["reasons"]:
-
-                print(
-                    f"• {reason}"
-                )
-
-        else:
-
-            print(
-                "• None"
-            )
-
-
-        print(
-            "URLs:"
-        )
-
-        if result["urls"]:
-
-            for url in result["urls"]:
-
-                print(
-                    f"• {url}"
-                )
-
-        else:
-
-            print(
-                "• None"
-            )
